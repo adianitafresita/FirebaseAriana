@@ -1,118 +1,195 @@
-// Importación de bibliotecas y componentes necesarios
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import { database } from '../config/firebase'; // Importa la configuración de la base de datos de Firebase
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'; // Importa funciones de Firestore para consultas en tiempo real
-import CardProductos from '../components/CardProductos'; // Importa el componente de tarjeta de producto
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
+import { database, storage } from '../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc } from 'firebase/firestore';
+import * as ImagePicker from 'expo-image-picker';
 
-// Definición del componente principal Home
-const Home = ({ navigation }) => {
-    // Definición del estado local para almacenar los productos
-    const [productos, setProductos] = useState([]);
+// Componente Add para agregar un nuevo producto
+const Add = ({ navigation }) => {
+    // Estado inicial del producto
+    const [producto, setProducto] = useState({
+        nombre: '',
+        precio: 0,
+        vendido: false,
+        creado: new Date(),
+        imagen: ''
+    });
 
-    // useEffect se ejecuta cuando el componente se monta
-    useEffect(() => {
-        // Define una consulta a la colección 'productos' en Firestore, ordenada por el campo 'creado' en orden descendente
-        const q = query(collection(database, 'productos'), orderBy('creado', 'desc'));
-        
-        // Escucha cambios en la consulta de Firestore en tiempo real
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const docs = [];
-            querySnapshot.forEach((doc) => {
-                // Empuja cada documento con su ID a la lista de docs
-                docs.push({ id: doc.id, ...doc.data() });
+    const [loading, setLoading] = useState(false); // Estado de carga
+
+    // Función para navegar a la pantalla de inicio
+    const goToHome = () => {
+        navigation.navigate('Home');
+    };
+
+    // Función para abrir la galería de imágenes del dispositivo
+    const openGalery = async () => {
+        try {
+            let result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.All,
+                allowsEditing: true,
+                aspect: [8, 8],
+                quality: 1,
             });
-            // Actualiza el estado de productos con los datos recibidos
-            setProductos(docs);
-        });
 
-        // Limpieza de la suscripción al desmontar el componente
-        return () => unsubscribe();
-    }, []);
+            if (!result.canceled && result.assets.length > 0) {
+                setProducto({
+                    ...producto,
+                    imagen: result.assets[0].uri
+                });
+                console.log('Imagen seleccionada:', result.assets[0].uri);
+            }
+        } catch (error) {
+            console.log('Error al abrir la galería', error);
+        }
+    };
 
-    // Función para navegar a la pantalla 'Add'
-    const goToAdd = () => { 
-        navigation.navigate('Add');
-    }
+    // Función para agregar el producto a Firestore
+    const agregarProducto = async () => {
+        setLoading(true); // Iniciar la carga
+        try {
+            let imageUrl = null;
 
-    // Función que renderiza cada item de la lista
-    const renderItem = ({ item }) => (
-        <CardProductos
-            id={item.id}
-            nombre={item.nombre}
-            precio={item.precio}
-            vendido={item.vendido}
-            imagen={item.imagen}
-        />
-    );
-
-    // Renderiza la interfaz del componente Home
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Productos Disponibles</Text>
-
-            {/* Muestra la lista de productos si hay elementos, de lo contrario muestra un mensaje */}
-            {
-                productos.length !== 0 ?
-                <FlatList
-                    data={productos}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.list}
-                />
-                : 
-                <Text style={styles.Subtitle}>No hay productos disponibles</Text>
+            if (producto.imagen) {
+                console.log('Subiendo imagen a Firebase Storage...');
+                const imageRef = ref(storage, `images/${Date.now()}-${producto.nombre}`);
+                const response = await fetch(producto.imagen);
+                const blob = await response.blob();
+                const snapshot = await uploadBytes(imageRef, blob);
+                imageUrl = await getDownloadURL(snapshot.ref);
+                console.log("URL de la imagen:", imageUrl);
             }
 
-            {/* Botón para navegar a la pantalla de agregar productos */}
-            <TouchableOpacity
-                style={styles.Button}
-                onPress={goToAdd}>
-                <Text style={styles.ButtonText}>Agregar Producto</Text>
+            await addDoc(collection(database, 'productos'), { ...producto, imagen: imageUrl });
+            console.log('Se guardó la colección');
+
+            Alert.alert('Producto agregado', 'El producto se agregó correctamente', [
+                { text: 'Ok', onPress: goToHome },
+            ]);
+
+            goToHome();
+        } catch (error) {
+            console.error('Error al agregar el producto', error);
+            Alert.alert('Error', 'Ocurrió un error al agregar el producto. Por favor, intenta nuevamente.');
+        } finally {
+            setLoading(false); // Finalizar la carga
+        }
+    };
+
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>Agregar producto</Text>
+            <View style={styles.inputContainer}>
+                <Text style={styles.label}>Nombre:</Text>
+                <TextInput
+                    style={styles.input}
+                    onChangeText={text => setProducto({ ...producto, nombre: text })}
+                    value={producto.nombre}
+                />
+            </View>
+            <View style={styles.inputContainer}>
+                <Text style={styles.label}>Precio:</Text>
+                <TextInput
+                    style={styles.input}
+                    onChangeText={text => setProducto({ ...producto, precio: parseFloat(text) })}
+                    value={producto.precio}
+                    keyboardType='numeric'
+                />
+            </View>
+            <Text>Imagen:</Text>
+            <TouchableOpacity onPress={openGalery} style={styles.imagePicker}>
+                <Text style={styles.imagePickerText}>Seleccionar Imagen</Text>
             </TouchableOpacity>
+            {producto.imagen ? <Image source={{ uri: producto.imagen }} style={styles.imagePreview} /> : null}
+
+            {loading ? (
+                <ActivityIndicator size="large" color="#0288d1" />
+            ) : (
+                <>
+                    <TouchableOpacity style={styles.button} onPress={agregarProducto}>
+                        <Text style={styles.buttonText}>Agregar producto</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.button} onPress={goToHome}>
+                        <Text style={styles.buttonText}>Volver a home</Text>
+                    </TouchableOpacity>
+                </>
+            )}
         </View>
     );
 };
 
+export default Add;
 
-// Exporta el componente Home como predeterminado
-export default Home;
-
-// Estilos para el componente Home
+// Estilos del componente
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FEFEFE',
+        backgroundColor: '#fff',
+        alignItems: 'center',
         justifyContent: 'center',
         padding: 20,
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
+        marginBottom: 20,
         textAlign: 'center',
+    },
+    input: {
+        height: 40,
+        borderColor: '#ccc',
+        borderWidth: 1,
+        borderRadius: 4,
+        paddingLeft: 8,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 2,
+        width: '100%'
+    },
+    imagePicker: {
+        backgroundColor: '#0288d1',
+        padding: 10,
+        borderRadius: 5,
+        alignItems: 'center',
+        marginBottom: 20,
+        width: '100%',
+    },
+    imagePickerText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    imagePreview: {
+        width: 100,
+        height: 100,
         marginBottom: 20,
     },
-    Subtitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 10,
-        color:'#ff9800'
-    },
-    Button: {
+    button: {
         backgroundColor: '#0288d1',
         padding: 10,
         borderRadius: 5,
         marginTop: 20,
-        marginHorizontal: 50,
-        paddingVertical: 20,
+        width: '100%',
+        alignItems: 'center',
     },
-    ButtonText: {
+    buttonText: {
         color: 'white',
         fontWeight: 'bold',
         textAlign: 'center',
     },
-    list: {
-        flexGrow: 1,
+    label: {
+        fontSize: 16,
+        marginBottom: 8,
+        color: '#333',
+    },
+    inputContainer: {
+        width: '100%',
+        padding: 16,
+        backgroundColor: '#f8f9fa',
+        marginBottom: 16,
     },
 });

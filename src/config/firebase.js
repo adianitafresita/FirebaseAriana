@@ -5,12 +5,12 @@ import { API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, 
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: API_KEY,
-  authDomain: AUTH_DOMAIN,
-  projectId: PROJECT_ID,
-  storageBucket: STORAGE_BUCKET,
-  messagingSenderId: MESSAGING_SENDER_ID,
-  appId: APP_ID    
+  apiKey: "AIzaSyAeZqWUPYSNoMKMrTPMlnk435xVI8eYJBg",
+  authDomain: "practica-firebase-20220125.firebaseapp.com",
+  projectId: "practica-firebase-20220125",
+  storageBucket: "practica-firebase-20220125.appspot.com",
+  messagingSenderId: "655988857794",
+  appId: "1:3687a78327bd667600545b"
 };
 
 console.log("Valor de configuracion", firebaseConfig);
