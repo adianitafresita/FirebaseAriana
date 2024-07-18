@@ -28,13 +28,8 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontWeight: "bold",
         marginBottom: 5,
-        color: "#199797"
-    },
-    subtitle: {
-        textAlign: "center",
-        marginBottom: 30,
-        width: 280
-    },
+        color: "#000"
+    }
 });
 
 

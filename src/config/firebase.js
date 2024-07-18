@@ -4,7 +4,7 @@ import { getStorage } from 'firebase/storage';
 import { API_KEY, AUTH_DOMAIN, PROJECT_ID, STORAGE_BUCKET, MESSAGING_SENDER_ID, APP_ID } from '@env';
 
 // Your web app's Firebase configuration
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyAeZqWUPYSNoMKMrTPMlnk435xVI8eYJBg",
   authDomain: "practica-firebase-20220125.firebaseapp.com",
   projectId: "practica-firebase-20220125",

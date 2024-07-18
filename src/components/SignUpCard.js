@@ -100,13 +100,13 @@ const SignUpCard = () => {
 const styles = StyleSheet.create({
     input: {
         marginTop: 8,
-        backgroundColor: '#d1f8ec',
+        backgroundColor: '#ffe5f0',
         width: 280
     },
     button: {
         marginTop: 30,
         marginBottom: 12,
-        backgroundColor: '#199797',
+        backgroundColor: '#ffe5f0',
         padding: 5,
         borderRadius: 25
     },
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         textAlign: "center",
         fontWeight: "bold",
-        color: '#199797'
+        color: '#000'
     },
     row: {
         flexDirection: "row",
